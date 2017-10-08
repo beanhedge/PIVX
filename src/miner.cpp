@@ -454,6 +454,10 @@ bool ProcessBlockFound(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     if (!ProcessNewBlock(state, NULL, pblock))
         return error("PIVXMiner : ProcessNewBlock, block not accepted");
 
+    // Send block to peers
+    for (CNode* node : vNodes)
+        node->PushInventory(CInv(MSG_BLOCK, block.GetHash()));
+
     return true;
 }
 
