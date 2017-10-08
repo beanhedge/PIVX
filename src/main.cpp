@@ -5979,6 +5979,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                         TRY_LOCK(cs_main, lockMain);
                         if(lockMain) Misbehaving(pfrom->GetId(), nDoS);
                     }
+                } else {
+                    // If the inventory is fresh then push new inventory to peers that have not seen it yet
+                    if (block.GetBlockTime() > GetAdjustedTime() - 180) {
+                        for (CNode* node : vNodes)
+                            node->PushInventory(CInv(MSG_BLOCK, hashBlock));
+                    }
                 }
                 //disconnect this node if its old protocol version
                 pfrom->DisconnectOldProtocol(ActiveProtocol(), strCommand);
