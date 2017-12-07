@@ -25,9 +25,10 @@ public:
 class CZPivStake : public CStakeInput
 {
 private:
-    CZerocoinMint mint;
+    libzerocoin::CoinSpend spend;
 
 public:
+    void SetSpend(libzerocoin::CoinSpend spend) { this->spend = spend; }
     CBlockIndex* GetIndexFrom() override;
     CAmount GetValue() override;
     bool GetModifier(uint64_t& nStakeModifier) override;
@@ -39,6 +40,7 @@ class CPivStake : public CStakeInput
 private:
     std::pair<const CWalletTx*, unsigned int> pcoin;
 public:
+    void SetInput(const CTransaction& tx, unsigned int pos);
     bool CreateTxIn(CTxIn& txIn) override;
     CAmount GetValue() override;
     bool GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) override;

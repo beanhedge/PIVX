@@ -13,19 +13,20 @@ CBlockIndex* CZPivStake::GetIndexFrom() override
     if (pindexFrom)
         return pindexFrom;
 
-    int nTxHeight = mint.GetHeight();
-    int nAccumulatedHeight = (10 - nTxHeight % 10) + 10 + nTxHeight;
+    //todo - match up acc checksum from spend object to a block height
+//    int nTxHeight = mint.GetHeight();
+//    int nAccumulatedHeight = (10 - nTxHeight % 10) + 10 + nTxHeight;
 
-    if (chainActive.Height() < nAccumulatedHeight)
-        return nullptr;
-
-    pindexFrom = chainActive[nAccumulatedHeight];
+//    if (chainActive.Height() < nAccumulatedHeight)
+//        return nullptr;
+//
+//    pindexFrom = chainActive[nAccumulatedHeight];
     return pindexFrom;
 }
 
 CAmount CZPivStake::GetValue() override
 {
-    return mint.GetDenominationAsAmount();
+    return spend.getDenomination() * COIN;
 }
 
 //Use the first accumulator checkpoint that occurs 60 minutes after the block being staked from
@@ -52,7 +53,7 @@ bool CZPivStake::GetModifier(uint64_t& nStakeModifier) override
 CDataStream CZPivStake::GetUniqueness() override
 {
     CDataStream ss(SER_GETHASH, 0);
-    ss << mint.GetSerialNumber();
+    ss << spend.getCoinSerialNumber();
     return ss;
 }
 

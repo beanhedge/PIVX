@@ -292,7 +292,7 @@ bool CheckStake(const CDataStream& ssUniqueID, CAmount nValueIn, const uint64_t 
     return stakeTargetHit(hashProofOfStake, nValueIn, bnTarget);
 }
 
-bool Stake(CStakeInput stakeInput, unsigned int nBits, unsigned int nTimeBlockFrom, unsigned int& nTimeTx, uint256& hashProofOfStake)
+bool Stake(CStakeInput* stakeInput, unsigned int nBits, unsigned int nTimeBlockFrom, unsigned int& nTimeTx, uint256& hashProofOfStake)
 {
     if (nTimeTx < nTimeBlockFrom)
         return error("CheckStakeKernelHash() : nTime violation");
@@ -307,7 +307,7 @@ bool Stake(CStakeInput stakeInput, unsigned int nBits, unsigned int nTimeBlockFr
 
     //grab stake modifier
     uint64_t nStakeModifier = 0;
-    if (!stakeInput.GetModifier(nStakeModifier)) {
+    if (!stakeInput->GetModifier(nStakeModifier)) {
         LogPrintf("CheckStakeKernelHash(): failed to get kernel stake modifier \n");
         return false;
     }
@@ -317,8 +317,8 @@ bool Stake(CStakeInput stakeInput, unsigned int nBits, unsigned int nTimeBlockFr
     unsigned int i;
     int nHeightStart = chainActive.Height();
     int nHashDrift = 45;
-    CDataStream ssUniqueID = stakeInput.GetUniqueness();
-    CAmount nValueIn = stakeInput.GetValue();
+    CDataStream ssUniqueID = stakeInput->GetUniqueness();
+    CAmount nValueIn = stakeInput->GetValue();
     for (i = 0; i < nHashDrift; i++) //iterate the hashing
     {
         //new block came in, move on
@@ -378,6 +378,21 @@ bool CheckProofOfStake(const CBlock block, uint256& hashProofOfStake)
 
     unsigned int nInterval = 0;
     unsigned int nTime = block.nTime;
+    uint256 bnTargetPerCoinDay;
+    bnTargetPerCoinDay.SetCompact(block.nBits);
+
+    //Construct the stakeinput object
+    CStakeInput* stakeInput;
+    if (tx.IsZerocoinSpend()) {
+        CZPivStake* zpivInput = new CZPivStake();
+        libzerocoin::CoinSpend spend = TxInToZerocoinSpend(txin);
+        zpivInput->SetSpend(spend);
+        stakeInput = zpivInput;
+    } else {
+        CPivStake* pivInput;
+        pivInpu
+    }
+
     if (!CheckStakeKernelHash(block.nBits, blockprev, txPrev, txin.prevout, nTime, nInterval, true, hashProofOfStake, fDebug))
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s \n", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
