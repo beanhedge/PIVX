@@ -376,8 +376,6 @@ bool CheckProofOfStake(const CBlock block, uint256& hashProofOfStake)
     if (!ReadBlockFromDisk(blockprev, pindex->GetBlockPos()))
         return error("CheckProofOfStake(): INFO: failed to find block");
 
-    unsigned int nInterval = 0;
-    unsigned int nTime = block.nTime;
     uint256 bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(block.nBits);
 
@@ -390,11 +388,21 @@ bool CheckProofOfStake(const CBlock block, uint256& hashProofOfStake)
         stakeInput = zpivInput;
     } else {
         CPivStake* pivInput;
-        pivInpu
+        pivInput->SetInput(txPrev, txin.prevout.n);
+        stakeInput = pivInput;
     }
 
-    if (!CheckStakeKernelHash(block.nBits, blockprev, txPrev, txin.prevout, nTime, nInterval, true, hashProofOfStake, fDebug))
+    uint64_t nStakeModifier = 0;
+    if (!stakeInput->GetModifier(nStakeModifier))
+        return error("");
+
+    if (!CheckStake(stakeInput->GetUniqueness(), stakeInput->GetValue(), nStakeModifier, bnTargetPerCoinDay,
+                    blockprev.nTime, block.nTime, hashProofOfStake))
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s \n", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
+
+
+//    if (!CheckStakeKernelHash(block.nBits, blockprev, txPrev, txin.prevout, nTime, nInterval, true, hashProofOfStake, fDebug))
+//        return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s \n", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
     return true;
 }
