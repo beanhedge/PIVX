@@ -14,8 +14,10 @@ protected:
     CBlockIndex* pindexFrom;
 
 public:
+    virtual ~CStakeInput(){};
     virtual CBlockIndex* GetIndexFrom() = 0;
     virtual bool CreateTxIn(CTxIn& txIn) = 0;
+    virtual bool GetTxFrom(CTransaction& tx) = 0;
     virtual CAmount GetValue() = 0;
     virtual bool GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) = 0;
     virtual bool GetModifier(uint64_t& nStakeModifier) = 0;
@@ -25,26 +27,43 @@ public:
 class CZPivStake : public CStakeInput
 {
 private:
-    libzerocoin::CoinSpend spend;
+    libzerocoin::CoinSpend* spend;
 
 public:
-    void SetSpend(libzerocoin::CoinSpend spend) { this->spend = spend; }
+    explicit CZPivStake(libzerocoin::CoinSpend spend)
+    {
+        this->spend = &spend;
+    }
+
     CBlockIndex* GetIndexFrom() override;
+    bool GetTxFrom(CTransaction& tx) override;
     CAmount GetValue() override;
     bool GetModifier(uint64_t& nStakeModifier) override;
     CDataStream GetUniqueness() override;
+    bool CreateTxIn(CTxIn& txIn) override;
+    bool GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) override;
 };
 
 class CPivStake : public CStakeInput
 {
 private:
-    std::pair<const CWalletTx*, unsigned int> pcoin;
+    std::pair<CTransaction*, unsigned int> pcoin;
 public:
-    void SetInput(const CTransaction& tx, unsigned int pos);
-    bool CreateTxIn(CTxIn& txIn) override;
+    CPivStake()
+    {
+        std::pair<CTransaction*, unsigned int> pair1(nullptr, 0);
+        pcoin = pair1;
+    }
+
+    bool SetInput(std::pair<CTransaction*, unsigned int> input);
+
+    CBlockIndex* GetIndexFrom() override;
+    bool GetTxFrom(CTransaction& tx) override;
     CAmount GetValue() override;
-    bool GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) override;
     bool GetModifier(uint64_t& nStakeModifier) override;
+    CDataStream GetUniqueness() override;
+    bool CreateTxIn(CTxIn& txIn) override;
+    bool GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) override;
 };
 
 

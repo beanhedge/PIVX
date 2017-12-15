@@ -147,6 +147,7 @@ BITCOIN_CORE_H = \
   serialize.h \
   spork.h \
   sporkdb.h \
+  stakeinput.h \
   streams.h \
   sync.h \
   threadsafety.h \
@@ -263,6 +264,7 @@ libbitcoin_wallet_a_SOURCES = \
   wallet.cpp \
   wallet_ismine.cpp \
   walletdb.cpp \
+  stakeinput.cpp \
   $(BITCOIN_CORE_H)
 
 # crypto primitives library

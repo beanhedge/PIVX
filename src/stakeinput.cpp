@@ -8,10 +8,10 @@
 #include "stakeinput.h"
 #include "wallet.h"
 
-CBlockIndex* CZPivStake::GetIndexFrom() override
+CBlockIndex* CZPivStake::GetIndexFrom()
 {
-    if (pindexFrom)
-        return pindexFrom;
+   // if (pindexFrom)
+     //   return pindexFrom;
 
     //todo - match up acc checksum from spend object to a block height
 //    int nTxHeight = mint.GetHeight();
@@ -21,16 +21,17 @@ CBlockIndex* CZPivStake::GetIndexFrom() override
 //        return nullptr;
 //
 //    pindexFrom = chainActive[nAccumulatedHeight];
-    return pindexFrom;
+    //return pindexFrom;
+    return nullptr;
 }
 
-CAmount CZPivStake::GetValue() override
+CAmount CZPivStake::GetValue()
 {
-    return spend.getDenomination() * COIN;
+    return spend->getDenomination() * COIN;
 }
 
 //Use the first accumulator checkpoint that occurs 60 minutes after the block being staked from
-bool CZPivStake::GetModifier(uint64_t& nStakeModifier) override
+bool CZPivStake::GetModifier(uint64_t& nStakeModifier)
 {
     CBlockIndex* pindex = GetIndexFrom();
     if (!pindex)
@@ -50,25 +51,54 @@ bool CZPivStake::GetModifier(uint64_t& nStakeModifier) override
     }
 }
 
-CDataStream CZPivStake::GetUniqueness() override
+CDataStream CZPivStake::GetUniqueness()
 {
     CDataStream ss(SER_GETHASH, 0);
-    ss << spend.getCoinSerialNumber();
+    ss << spend->getCoinSerialNumber();
     return ss;
 }
 
-bool CPivStake::CreateTxIn(CTxIn& txIn) override
+bool CZPivStake::CreateTxIn(CTxIn& txIn)
+{
+    return true;
+}
+
+bool CZPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey)
+{
+    return true;
+}
+
+bool CZPivStake::GetTxFrom(CTransaction& tx)
+{
+    return false;
+}
+
+
+//!PIV Stake
+bool CPivStake::SetInput(std::pair<CTransaction*, unsigned int> input)
+{
+    this->pcoin = input;
+    return true;
+}
+
+bool CPivStake::GetTxFrom(CTransaction& tx)
+{
+    tx = *pcoin.first;
+    return true;
+}
+
+bool CPivStake::CreateTxIn(CTxIn& txIn)
 {
     txIn = CTxIn(pcoin.first->GetHash(), pcoin.second);
     return true;
 }
 
-CAmount CPivStake::GetValue() override
+CAmount CPivStake::GetValue()
 {
     return pcoin.first->vout[pcoin.second].nValue;
 }
 
-bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) override
+bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey)
 {
     vector<valtype> vSolutions;
     txnouttype whichType;
@@ -96,7 +126,7 @@ bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubK
     return true;
 }
 
-bool CPivStake::GetModifier(uint64_t& nStakeModifier) override
+bool CPivStake::GetModifier(uint64_t& nStakeModifier)
 {
     int nStakeModifierHeight = 0;
     int64_t nStakeModifierTime = 0;
@@ -110,4 +140,15 @@ bool CPivStake::GetModifier(uint64_t& nStakeModifier) override
     }
 
     return true;
+}
+
+CDataStream CPivStake::GetUniqueness()
+{
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    return ss;
+}
+
+CBlockIndex* CPivStake::GetIndexFrom()
+{
+    return nullptr;
 }

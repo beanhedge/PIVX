@@ -1749,7 +1749,7 @@ bool less_then_denom(const COutput& out1, const COutput& out2)
     return (!found1 && found2);
 }
 
-bool CWallet::SelectStakeCoins(list<CStakeInput>& listInputs, CAmount nTargetAmount) const
+bool CWallet::SelectStakeCoins(list<CStakeInput*>& listInputs, CAmount nTargetAmount) const
 {
     vector<COutput> vCoins;
     AvailableCoins(vCoins, true, NULL, false, STAKABLE_COINS);
@@ -2546,7 +2546,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     // presstab HyperStake - Initialize as static and don't update the set on every run of CreateCoinStake() in order to lighten resource use
     //static std::set<pair<const CWalletTx*, unsigned int> > setStakeCoins;
     static int nLastStakeSetUpdate = 0;
-    list<CStakeInput> listInputs;
+    list<CStakeInput*> listInputs;
     if (GetTime() - nLastStakeSetUpdate > nStakeSetUpdateTime) {
         listInputs.clear();
         if (!SelectStakeCoins(listInputs, nBalance - nReserveBalance))
@@ -2559,10 +2559,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     CWalletDB walletdb(strWalletFile);
     list<CZerocoinMint> listStakableZPiv = walletdb.ListMintedCoins(true, true, true);
 
-    if (setStakeCoins.empty() && listStakableZPiv.empty())
-        return false;
-
-    vector<const CWalletTx*> vwtxPrev;
+    vector<const CTransaction*> txPrev;
 
     CAmount nCredit = 0;
     CScript scriptPubKeyKernel;
@@ -2571,9 +2568,9 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     if (GetAdjustedTime() <= chainActive.Tip()->nTime)
         MilliSleep(10000);
 
-    for (CStakeInput stakeInput : listInputs) {
+    for (CStakeInput* stakeInput : listInputs) {
         //make sure that enough time has elapsed between
-        CBlockIndex* pindex = stakeInput.GetIndexFrom();
+        CBlockIndex* pindex = stakeInput->GetIndexFrom();
         if (!pindex)
             continue;
 
@@ -2597,26 +2594,29 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 LogPrintf("CreateCoinStake : kernel found\n");
 
             CTxIn in;
-            if (!stakeInput.CreateTxIn(in)) {
+            if (!stakeInput->CreateTxIn(in)) {
                 LogPrintf("%s : failed to create TxIn\n", __func__);
                 continue;
             }
 
             txNew.vin.push_back(in);
-            nCredit += stakeInput.GetValue();
-            vwtxPrev.push_back(pcoin.first);
+            nCredit += stakeInput->GetValue();
+
+            CTransaction tx;
+            if (stakeInput->GetTxFrom(tx))
+                txPrev.push_back(&tx);
 
             CScript scriptPubKey;
-            if (!stakeInput.GetScriptPubKeyTo(keystore, scriptPubKey)) {
+            if (!stakeInput->GetScriptPubKeyTo(keystore, scriptPubKey)) {
                 LogPrintf("%s : failed to get scriptPubKey\n", __func__);
                 continue;
             }
             txNew.vout.emplace_back(CTxOut(0, scriptPubKey));
 
-            //presstab HyperStake - calculate the total size of our new output including the stake reward so that we can use it to decide whether to split the stake outputs
-            CAmount nTotalSize = stakeInput.GetValue() + GetBlockValue(chainActive.Height() + 1);
+            //PIVX: calculate the total size of our new output including the stake reward so that we can use it to decide whether to split the stake outputs
+            CAmount nTotalSize = stakeInput->GetValue() + GetBlockValue(chainActive.Height() + 1);
 
-            //presstab HyperStake - if MultiSend is set to send in coinstake we will add our outputs here (values asigned further down)
+            //PIVX: If MultiSend is set to send in coinstake we will add our outputs here (values asigned further down)
             if (nTotalSize / 2 > nStakeSplitThreshold * COIN)
                 txNew.vout.push_back(CTxOut(0, scriptPubKey)); //split stake
 
@@ -2664,10 +2664,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     //Masternode payment
     FillBlockPayee(txNew, nMinFee, true);
 
-    // Sign
+    // Sign for PIV
     int nIn = 0;
-    BOOST_FOREACH (const CWalletTx* pcoin, vwtxPrev) {
-        if (!SignSignature(*this, *pcoin, txNew, nIn++))
+    for (const CTransaction* tx : txPrev) {
+        CWalletTx wtx(this, *tx);
+        if (!SignSignature(*this, wtx, txNew, nIn++))
             return error("CreateCoinStake : failed to sign coinstake");
     }
 
