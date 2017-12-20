@@ -392,15 +392,17 @@ bool CheckProofOfStake(const CBlock block, uint256& hashProofOfStake)
 
     uint64_t nStakeModifier = 0;
     if (!stakeInput->GetModifier(nStakeModifier))
-        return error("");
+        return error("%s failed to get modifier for stake input\n", __func__);
 
     unsigned int nTimeTx = blockprev.nTime;
     unsigned int nBlockTime = block.nTime;
     if (!CheckStake(stakeInput->GetUniqueness(), stakeInput->GetValue(), nStakeModifier, bnTargetPerCoinDay, nTimeTx,
                     nBlockTime, hashProofOfStake)) {
+
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s \n",
                      tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str());
     }
+    LogPrintf("Stake Check Passed!\n");
 
 
 //    if (!CheckStakeKernelHash(block.nBits, blockprev, txPrev, txin.prevout, nTime, nInterval, true, hashProofOfStake, fDebug))

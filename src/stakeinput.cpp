@@ -2,27 +2,31 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "accumulators.h"
 #include "chain.h"
 #include "primitives/zerocoin.h"
 #include "main.h"
 #include "stakeinput.h"
 #include "wallet.h"
 
+// The zPIV block index is the first appearance of the accumulator checksum that was used in the spend
+// note that this also means when staking that this checksum should be from a block that is beyond 60 minutes old and
+// 100 blocks deep.
 CBlockIndex* CZPivStake::GetIndexFrom()
 {
-   // if (pindexFrom)
-     //   return pindexFrom;
+    if (pindexFrom)
+        return pindexFrom;
 
-    //todo - match up acc checksum from spend object to a block height
-//    int nTxHeight = mint.GetHeight();
-//    int nAccumulatedHeight = (10 - nTxHeight % 10) + 10 + nTxHeight;
+    uint32_t nChecksum = spend->getAccumulatorChecksum();
+    int nHeightChecksum = GetChecksumHeight(nChecksum, spend->getDenomination());
+    if (nHeightChecksum < Params().Zerocoin_StartHeight()) {
+        pindexFrom = nullptr;
+    } else {
+        //note that this will be a nullptr if the height DNE
+        pindexFrom = chainActive[nHeightChecksum];
+    }
 
-//    if (chainActive.Height() < nAccumulatedHeight)
-//        return nullptr;
-//
-//    pindexFrom = chainActive[nAccumulatedHeight];
-    //return pindexFrom;
-    return nullptr;
+    return pindexFrom;
 }
 
 CAmount CZPivStake::GetValue()
@@ -53,6 +57,7 @@ bool CZPivStake::GetModifier(uint64_t& nStakeModifier)
 
 CDataStream CZPivStake::GetUniqueness()
 {
+    //The unique identifier for a ZPIV is the serial
     CDataStream ss(SER_GETHASH, 0);
     ss << spend->getCoinSerialNumber();
     return ss;
@@ -144,11 +149,25 @@ bool CPivStake::GetModifier(uint64_t& nStakeModifier)
 
 CDataStream CPivStake::GetUniqueness()
 {
-    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    //The unique identifier for a PIV stake is the outpoint
+    CDataStream ss(SER_NETWORK, 0);
+    ss << pcoin.second << pcoin.first->GetHash();
     return ss;
 }
 
+//The block that the UTXO was added to the chain
 CBlockIndex* CPivStake::GetIndexFrom()
 {
-    return nullptr;
+    uint256 hashBlock = 0;
+    CTransaction tx;
+    if (GetTransaction(pcoin.first->GetHash(), tx, hashBlock, true)) {
+        // If the index is in the chain, then set it as the "index from"
+        if (mapBlockIndex.count(hashBlock)) {
+            CBlockIndex* pindex = mapBlockIndex.at(hashBlock);
+            if (chainActive.Contains(pindex))
+                pindexFrom = pindex;
+        }
+    }
+
+    return pindexFrom;
 }

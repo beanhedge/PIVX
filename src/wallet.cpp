@@ -1755,7 +1755,6 @@ bool CWallet::SelectStakeCoins(list<CStakeInput*>& listInputs, CAmount nTargetAm
     AvailableCoins(vCoins, true, NULL, false, STAKABLE_COINS);
     CAmount nAmountSelected = 0;
 
-    std::set<std::pair<const CWalletTx*, unsigned int> > setCoins;
     for (const COutput& out : vCoins) {
         //make sure not to outrun target amount
         if (nAmountSelected + out.tx->vout[out.i].nValue > nTargetAmount)
@@ -1778,8 +1777,11 @@ bool CWallet::SelectStakeCoins(list<CStakeInput*>& listInputs, CAmount nTargetAm
             continue;
 
         //add to our stake set
-        setCoins.insert(make_pair(out.tx, out.i));
         nAmountSelected += out.tx->vout[out.i].nValue;
+
+        CPivStake* input = new CPivStake();
+        input->SetInput(make_pair((CTransaction*)out.tx, out.i));
+        listInputs.emplace_back((CStakeInput*)input);
     }
     return true;
 }
@@ -2547,13 +2549,13 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     //static std::set<pair<const CWalletTx*, unsigned int> > setStakeCoins;
     static int nLastStakeSetUpdate = 0;
     list<CStakeInput*> listInputs;
-    if (GetTime() - nLastStakeSetUpdate > nStakeSetUpdateTime) {
+    //if (GetTime() - nLastStakeSetUpdate > nStakeSetUpdateTime) {
         listInputs.clear();
         if (!SelectStakeCoins(listInputs, nBalance - nReserveBalance))
             return false;
 
         nLastStakeSetUpdate = GetTime();
-    }
+    //}
 
     //zPiv stake
     CWalletDB walletdb(strWalletFile);
@@ -2563,16 +2565,15 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     CAmount nCredit = 0;
     CScript scriptPubKeyKernel;
-
-    //prevent staking a time that won't be accepted
-    if (GetAdjustedTime() <= chainActive.Tip()->nTime)
-        MilliSleep(10000);
-
+    int nAttempts = 0;
     for (CStakeInput* stakeInput : listInputs) {
         //make sure that enough time has elapsed between
         CBlockIndex* pindex = stakeInput->GetIndexFrom();
         if (!pindex)
+        {
+            LogPrintf("*** no pindexfrom\n");
             continue;
+        }
 
         // Read block header
         CBlockHeader block = pindex->GetBlockHeader();
@@ -2582,6 +2583,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         nTxNewTime = GetAdjustedTime();
 
         //iterates each utxo inside of CheckStakeKernelHash()
+        nAttempts++;
         if (Stake(stakeInput, nBits, block.GetBlockTime(), nTxNewTime, hashProofOfStake)) {
             //Double check that this will pass time requirements
             if (nTxNewTime <= chainActive.Tip()->GetMedianTimePast()) {
@@ -2590,14 +2592,15 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             }
 
             // Found a kernel
-            if (fDebug && GetBoolArg("-printcoinstake", false))
-                LogPrintf("CreateCoinStake : kernel found\n");
+            LogPrintf("CreateCoinStake : kernel found\n");
 
             CTxIn in;
             if (!stakeInput->CreateTxIn(in)) {
                 LogPrintf("%s : failed to create TxIn\n", __func__);
                 continue;
             }
+
+            LogPrintf("line 2603\n");
 
             txNew.vin.push_back(in);
             nCredit += stakeInput->GetValue();
@@ -2612,6 +2615,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 continue;
             }
             txNew.vout.emplace_back(CTxOut(0, scriptPubKey));
+            LogPrintf("line 2618\n");
 
             //PIVX: calculate the total size of our new output including the stake reward so that we can use it to decide whether to split the stake outputs
             CAmount nTotalSize = stakeInput->GetValue() + GetBlockValue(chainActive.Height() + 1);
@@ -2626,14 +2630,16 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         if (fKernelFound)
             break; // if kernel is found stop searching
     }
-    if (nCredit == 0 || nCredit > nBalance - nReserveBalance)
+    if (nCredit == 0 || nCredit > nBalance - nReserveBalance) {
+        LogPrintf("*** attempted to stake %d coins\n", nAttempts);
         return false;
+    }
 
     // Calculate reward
     CAmount nReward;
     nReward = GetBlockValue(chainActive.Height() + 1);
     nCredit += nReward;
-
+    LogPrintf("line 2642\n");
     CAmount nMinFee = 0;
     while (true) {
         // Set output amount
@@ -2663,7 +2669,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     //Masternode payment
     FillBlockPayee(txNew, nMinFee, true);
-
+    LogPrintf("line 2672\n");
     // Sign for PIV
     int nIn = 0;
     for (const CTransaction* tx : txPrev) {
@@ -2671,7 +2677,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         if (!SignSignature(*this, wtx, txNew, nIn++))
             return error("CreateCoinStake : failed to sign coinstake");
     }
-
+    LogPrintf("line 2680\n");
     // Successfully generated coinstake
     nLastStakeSetUpdate = 0; //this will trigger stake set to repopulate next round
     return true;

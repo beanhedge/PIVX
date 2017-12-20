@@ -454,7 +454,7 @@ void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& 
     pblock->hashMerkleRoot = pblock->BuildMerkleTree();
 }
 
-#ifdef ENABLE_WALLET
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // Internal miner
@@ -709,4 +709,3 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet, int nThreads)
         minerThreads->create_thread(boost::bind(&ThreadBitcoinMiner, pwallet));
 }
 
-#endif // ENABLE_WALLET
