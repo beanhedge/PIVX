@@ -107,7 +107,6 @@ bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubK
 {
     vector<valtype> vSolutions;
     txnouttype whichType;
-    CScript scriptPubKeyOut;
     CScript scriptPubKeyKernel = pcoin.first->vout[pcoin.second].scriptPubKey;
     if (!Solver(scriptPubKeyKernel, whichType, vSolutions)) {
         LogPrintf("CreateCoinStake : failed to parse kernel\n");
@@ -124,9 +123,9 @@ bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubK
         if (!keystore.GetKey(uint160(vSolutions[0]), key))
             return false;
 
-        scriptPubKeyOut << key.GetPubKey() << OP_CHECKSIG;
+        scriptPubKey << key.GetPubKey() << OP_CHECKSIG;
     } else
-        scriptPubKeyOut = scriptPubKeyKernel;
+        scriptPubKey = scriptPubKeyKernel;
 
     return true;
 }

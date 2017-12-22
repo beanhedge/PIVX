@@ -178,12 +178,12 @@ bool CBlock::SignBlock(const CKeyStore& keystore)
     {
         const CTxOut& txout = vtx[1].vout[1];
 
-        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-            return false;
+        if (!Solver(txout.scriptPubKey, whichType, vSolutions)) {
 
-        if (whichType == TX_PUBKEYHASH)
-        {
+            return error("%s: Solver failed to determine txout script type : tx: %s", __func__, vtx[1].ToString());
+        }
 
+        if (whichType == TX_PUBKEYHASH) {
             CKeyID keyID;
             keyID = CKeyID(uint160(vSolutions[0]));
 
@@ -191,31 +191,21 @@ bool CBlock::SignBlock(const CKeyStore& keystore)
             if (!keystore.GetKey(keyID, key))
                 return false;
 
-            //vector<unsigned char> vchSig;
             if (!key.Sign(GetHash(), vchBlockSig))
-                 return false;
-
-            return true;
-
-        }
-        else if(whichType == TX_PUBKEY)
-        {
+                return error("%s: failed to sign block hash with key", __func__);
+        } else if(whichType == TX_PUBKEY) {
             CKeyID keyID;
             keyID = CPubKey(vSolutions[0]).GetID();
             CKey key;
             if (!keystore.GetKey(keyID, key))
-                return false;
+                return error("%s: failed to get key from keystore", __func__);
 
-            //vector<unsigned char> vchSig;
             if (!key.Sign(GetHash(), vchBlockSig))
-                 return false;
-
-            return true;
+                 return error("%s: failed to sign block hash with key, txout script type: pubkey");
         }
     }
 
-    LogPrintf("Sign failed\n");
-    return false;
+    return true;
 }
 
 bool CBlock::CheckBlockSignature() const

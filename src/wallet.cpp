@@ -2561,16 +2561,13 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     CWalletDB walletdb(strWalletFile);
     list<CZerocoinMint> listStakableZPiv = walletdb.ListMintedCoins(true, true, true);
 
-    vector<const CTransaction*> txPrev;
-
     CAmount nCredit = 0;
     CScript scriptPubKeyKernel;
     int nAttempts = 0;
     for (CStakeInput* stakeInput : listInputs) {
         //make sure that enough time has elapsed between
         CBlockIndex* pindex = stakeInput->GetIndexFrom();
-        if (!pindex)
-        {
+        if (!pindex) {
             LogPrintf("*** no pindexfrom\n");
             continue;
         }
@@ -2600,14 +2597,8 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 continue;
             }
 
-            LogPrintf("line 2603\n");
-
             txNew.vin.push_back(in);
             nCredit += stakeInput->GetValue();
-
-            CTransaction tx;
-            if (stakeInput->GetTxFrom(tx))
-                txPrev.push_back(&tx);
 
             CScript scriptPubKey;
             if (!stakeInput->GetScriptPubKeyTo(keystore, scriptPubKey)) {
@@ -2615,7 +2606,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 continue;
             }
             txNew.vout.emplace_back(CTxOut(0, scriptPubKey));
-            LogPrintf("line 2618\n");
 
             //PIVX: calculate the total size of our new output including the stake reward so that we can use it to decide whether to split the stake outputs
             CAmount nTotalSize = stakeInput->GetValue() + GetBlockValue(chainActive.Height() + 1);
@@ -2672,9 +2662,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     LogPrintf("line 2672\n");
     // Sign for PIV
     int nIn = 0;
-    for (const CTransaction* tx : txPrev) {
-        CWalletTx wtx(this, *tx);
-        if (!SignSignature(*this, wtx, txNew, nIn++))
+    for (CTxIn txIn : txNew.vin) {
+
+        const CWalletTx* wtx = GetWalletTx(txIn.prevout.hash);
+
+        if (!SignSignature(*this, *wtx, txNew, nIn++))
             return error("CreateCoinStake : failed to sign coinstake");
     }
     LogPrintf("line 2680\n");
