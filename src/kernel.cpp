@@ -353,22 +353,31 @@ bool CheckProofOfStake(const CBlock block, uint256& hashProofOfStake)
     // Kernel (input 0) must match the stake hash target per coin age (nBits)
     const CTxIn& txin = tx.vin[0];
 
-    // First try finding the previous transaction in database
-    uint256 hashBlock;
-    CTransaction txPrev;
-    if (!GetTransaction(txin.prevout.hash, txPrev, hashBlock, true))
-        return error("CheckProofOfStake() : INFO: read txPrev failed");
+    //Construct the stakeinput object
+    CStakeInput* stakeInput;
+    if (tx.IsZerocoinSpend()) {
+        libzerocoin::CoinSpend spend = TxInToZerocoinSpend(txin);
+        CZPivStake* zpivInput = new CZPivStake(spend);
+        stakeInput = zpivInput;
+    } else {
+        // First try finding the previous transaction in database
+        uint256 hashBlock;
+        CTransaction txPrev;
+        if (!GetTransaction(txin.prevout.hash, txPrev, hashBlock, true))
+            return error("CheckProofOfStake() : INFO: read txPrev failed");
 
-    //verify signature and script
-    if (!VerifyScript(txin.scriptSig, txPrev.vout[txin.prevout.n].scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&tx, 0)))
-        return error("CheckProofOfStake() : VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str());
+        //verify signature and script
+        if (!VerifyScript(txin.scriptSig, txPrev.vout[txin.prevout.n].scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&tx, 0)))
+            return error("CheckProofOfStake() : VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str());
 
-    CBlockIndex* pindex = NULL;
-    BlockMap::iterator it = mapBlockIndex.find(hashBlock);
-    if (it != mapBlockIndex.end())
-        pindex = it->second;
-    else
-        return error("CheckProofOfStake() : read block failed");
+        CPivStake* pivInput = new CPivStake();
+        pivInput->SetInput(txPrev, txin.prevout.n);
+        stakeInput = pivInput;
+    }
+
+    CBlockIndex* pindex = stakeInput->GetIndexFrom();
+    if (!pindex)
+        return error("%s: Failed to find the block index", __func__);
 
     // Read block header
     CBlock blockprev;
@@ -377,18 +386,6 @@ bool CheckProofOfStake(const CBlock block, uint256& hashProofOfStake)
 
     uint256 bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(block.nBits);
-
-    //Construct the stakeinput object
-    CStakeInput* stakeInput;
-    if (tx.IsZerocoinSpend()) {
-        libzerocoin::CoinSpend spend = TxInToZerocoinSpend(txin);
-        CZPivStake* zpivInput = new CZPivStake(spend);
-        stakeInput = zpivInput;
-    } else {
-        CPivStake* pivInput = new CPivStake();
-        pivInput->SetInput(make_pair(&txPrev, txin.prevout.n));
-        stakeInput = pivInput;
-    }
 
     uint64_t nStakeModifier = 0;
     if (!stakeInput->GetModifier(nStakeModifier))
@@ -402,11 +399,8 @@ bool CheckProofOfStake(const CBlock block, uint256& hashProofOfStake)
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s \n",
                      tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str());
     }
+
     LogPrintf("Stake Check Passed!\n");
-
-
-//    if (!CheckStakeKernelHash(block.nBits, blockprev, txPrev, txin.prevout, nTime, nInterval, true, hashProofOfStake, fDebug))
-//        return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s \n", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
     return true;
 }

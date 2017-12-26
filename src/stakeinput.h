@@ -6,6 +6,7 @@
 #define PIVX_STAKEINPUT_H
 
 class CKeyStore;
+class CWallet;
 class CWalletTx;
 
 class CStakeInput
@@ -16,7 +17,7 @@ protected:
 public:
     virtual ~CStakeInput(){};
     virtual CBlockIndex* GetIndexFrom() = 0;
-    virtual bool CreateTxIn(CTxIn& txIn) = 0;
+    virtual bool CreateTxIn(CWallet* pwallet, CTxIn& txIn) = 0;
     virtual bool GetTxFrom(CTransaction& tx) = 0;
     virtual CAmount GetValue() = 0;
     virtual bool GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) = 0;
@@ -28,8 +29,14 @@ class CZPivStake : public CStakeInput
 {
 private:
     libzerocoin::CoinSpend* spend;
+    CZerocoinMint* mint;
 
 public:
+    explicit CZPivStake(CZerocoinMint* mint)
+    {
+        this->mint = mint;
+    }
+
     explicit CZPivStake(libzerocoin::CoinSpend spend)
     {
         this->spend = &spend;
@@ -40,29 +47,29 @@ public:
     CAmount GetValue() override;
     bool GetModifier(uint64_t& nStakeModifier) override;
     CDataStream GetUniqueness() override;
-    bool CreateTxIn(CTxIn& txIn) override;
+    bool CreateTxIn(CWallet* pwallet, CTxIn& txIn) override;
     bool GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) override;
 };
 
 class CPivStake : public CStakeInput
 {
 private:
-    std::pair<CTransaction*, unsigned int> pcoin;
+    CTransaction txFrom;
+    unsigned int nPosition;
 public:
     CPivStake()
     {
-        std::pair<CTransaction*, unsigned int> pair1(nullptr, 0);
-        pcoin = pair1;
+
     }
 
-    bool SetInput(std::pair<CTransaction*, unsigned int> input);
+    bool SetInput(CTransaction txPrev, unsigned int n);
 
     CBlockIndex* GetIndexFrom() override;
     bool GetTxFrom(CTransaction& tx) override;
     CAmount GetValue() override;
     bool GetModifier(uint64_t& nStakeModifier) override;
     CDataStream GetUniqueness() override;
-    bool CreateTxIn(CTxIn& txIn) override;
+    bool CreateTxIn(CWallet* pwallet, CTxIn& txIn) override;
     bool GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey) override;
 };
 

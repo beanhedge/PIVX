@@ -63,8 +63,14 @@ CDataStream CZPivStake::GetUniqueness()
     return ss;
 }
 
-bool CZPivStake::CreateTxIn(CTxIn& txIn)
+bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
 {
+    CZerocoinSpendReceipt receipt;
+    int nSecurityLevel = 5;
+    uint256 hashTxOut = 0;
+    if (!pwallet->MintToTxIn(*mint, nSecurityLevel, hashTxOut, txIn, receipt))
+        return error("%s\n", receipt.GetStatusMessage());
+
     return true;
 }
 
@@ -80,34 +86,35 @@ bool CZPivStake::GetTxFrom(CTransaction& tx)
 
 
 //!PIV Stake
-bool CPivStake::SetInput(std::pair<CTransaction*, unsigned int> input)
+bool CPivStake::SetInput(CTransaction txPrev, unsigned int n)
 {
-    this->pcoin = input;
+    this->txFrom = txPrev;
+    this->nPosition = n;
     return true;
 }
 
 bool CPivStake::GetTxFrom(CTransaction& tx)
 {
-    tx = *pcoin.first;
+    tx = txFrom;
     return true;
 }
 
-bool CPivStake::CreateTxIn(CTxIn& txIn)
+bool CPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
 {
-    txIn = CTxIn(pcoin.first->GetHash(), pcoin.second);
+    txIn = CTxIn(txFrom.GetHash(), nPosition);
     return true;
 }
 
 CAmount CPivStake::GetValue()
 {
-    return pcoin.first->vout[pcoin.second].nValue;
+    return txFrom.vout[nPosition].nValue;
 }
 
 bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey)
 {
     vector<valtype> vSolutions;
     txnouttype whichType;
-    CScript scriptPubKeyKernel = pcoin.first->vout[pcoin.second].scriptPubKey;
+    CScript scriptPubKeyKernel = txFrom.vout[nPosition].scriptPubKey;
     if (!Solver(scriptPubKeyKernel, whichType, vSolutions)) {
         LogPrintf("CreateCoinStake : failed to parse kernel\n");
         return false;
@@ -136,12 +143,10 @@ bool CPivStake::GetModifier(uint64_t& nStakeModifier)
     int64_t nStakeModifierTime = 0;
     GetIndexFrom();
     if (!pindexFrom)
-        return false;
+        return error("%s: failed to get index from", __func__);
 
-    if (!GetKernelStakeModifier(pindexFrom->GetBlockHash(), nStakeModifier, nStakeModifierHeight, nStakeModifierTime, false)) {
-        LogPrintf("CheckStakeKernelHash(): failed to get kernel stake modifier \n");
-        return false;
-    }
+    if (!GetKernelStakeModifier(pindexFrom->GetBlockHash(), nStakeModifier, nStakeModifierHeight, nStakeModifierTime, false))
+        return error("CheckStakeKernelHash(): failed to get kernel stake modifier \n");
 
     return true;
 }
@@ -150,7 +155,7 @@ CDataStream CPivStake::GetUniqueness()
 {
     //The unique identifier for a PIV stake is the outpoint
     CDataStream ss(SER_NETWORK, 0);
-    ss << pcoin.second << pcoin.first->GetHash();
+    ss << nPosition << txFrom.GetHash();
     return ss;
 }
 
@@ -159,13 +164,15 @@ CBlockIndex* CPivStake::GetIndexFrom()
 {
     uint256 hashBlock = 0;
     CTransaction tx;
-    if (GetTransaction(pcoin.first->GetHash(), tx, hashBlock, true)) {
+    if (GetTransaction(txFrom.GetHash(), tx, hashBlock, true)) {
         // If the index is in the chain, then set it as the "index from"
         if (mapBlockIndex.count(hashBlock)) {
             CBlockIndex* pindex = mapBlockIndex.at(hashBlock);
             if (chainActive.Contains(pindex))
                 pindexFrom = pindex;
         }
+    } else {
+        LogPrintf("%s : failed to find tx %s\n", __func__, txFrom.GetHash().GetHex());
     }
 
     return pindexFrom;

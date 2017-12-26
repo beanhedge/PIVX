@@ -1749,40 +1749,51 @@ bool less_then_denom(const COutput& out1, const COutput& out2)
     return (!found1 && found2);
 }
 
-bool CWallet::SelectStakeCoins(list<CStakeInput*>& listInputs, CAmount nTargetAmount) const
+bool CWallet::SelectStakeCoins(std::list<CStakeInput*>& listInputs, CAmount nTargetAmount) const
 {
-    vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, NULL, false, STAKABLE_COINS);
-    CAmount nAmountSelected = 0;
+    //Add PIV
+//    vector<COutput> vCoins;
+//    AvailableCoins(vCoins, true, NULL, false, STAKABLE_COINS);
+//    CAmount nAmountSelected = 0;
+//    for (const COutput& out : vCoins) {
+//        //make sure not to outrun target amount
+//        if (nAmountSelected + out.tx->vout[out.i].nValue > nTargetAmount)
+//            continue;
+//
+//        //if zerocoinspend, then use the block time
+//        int64_t nTxTime = out.tx->GetTxTime();
+//        if (out.tx->IsZerocoinSpend()) {
+//            if (!out.tx->IsInMainChain())
+//                continue;
+//            nTxTime = mapBlockIndex.at(out.tx->hashBlock)->GetBlockTime();
+//        }
+//
+//        //check for min age
+//        if (GetAdjustedTime() - nTxTime < nStakeMinAge)
+//            continue;
+//
+//        //check that it is matured
+//        if (out.nDepth < (out.tx->IsCoinStake() ? Params().COINBASE_MATURITY() : 10))
+//            continue;
+//
+//        //add to our stake set
+//        nAmountSelected += out.tx->vout[out.i].nValue;
+//
+//        CPivStake* input = new CPivStake();
+//        input->SetInput(make_pair((CTransaction*)out.tx, out.i));
+//        listInputs.emplace_back((CStakeInput*)input);
+//    }
 
-    for (const COutput& out : vCoins) {
-        //make sure not to outrun target amount
-        if (nAmountSelected + out.tx->vout[out.i].nValue > nTargetAmount)
-            continue;
-
-        //if zerocoinspend, then use the block time
-        int64_t nTxTime = out.tx->GetTxTime();
-        if (out.tx->IsZerocoinSpend()) {
-            if (!out.tx->IsInMainChain())
-                continue;
-            nTxTime = mapBlockIndex.at(out.tx->hashBlock)->GetBlockTime();
+    //Add zPIV
+    CWalletDB walletdb(strWalletFile);
+    list<CZerocoinMint> listMints = walletdb.ListMintedCoins(true, true, true);
+    for (CZerocoinMint mint : listMints) {
+        if (mint.GetHeight() > chainActive.Height() - 100) {
+            CZPivStake* input = new CZPivStake(&mint);
+            listInputs.emplace_back(input);
         }
-
-        //check for min age
-        if (GetAdjustedTime() - nTxTime < nStakeMinAge)
-            continue;
-
-        //check that it is matured
-        if (out.nDepth < (out.tx->IsCoinStake() ? Params().COINBASE_MATURITY() : 10))
-            continue;
-
-        //add to our stake set
-        nAmountSelected += out.tx->vout[out.i].nValue;
-
-        CPivStake* input = new CPivStake();
-        input->SetInput(make_pair((CTransaction*)out.tx, out.i));
-        listInputs.emplace_back((CStakeInput*)input);
     }
+
     return true;
 }
 
@@ -2556,7 +2567,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
         nLastStakeSetUpdate = GetTime();
     //}
-
+    LogPrintf("%s: listInputs size=%d\n", __func__, listInputs.size());
     //zPiv stake
     CWalletDB walletdb(strWalletFile);
     list<CZerocoinMint> listStakableZPiv = walletdb.ListMintedCoins(true, true, true);
@@ -2592,7 +2603,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             LogPrintf("CreateCoinStake : kernel found\n");
 
             CTxIn in;
-            if (!stakeInput->CreateTxIn(in)) {
+            if (!stakeInput->CreateTxIn(this, in)) {
                 LogPrintf("%s : failed to create TxIn\n", __func__);
                 continue;
             }
