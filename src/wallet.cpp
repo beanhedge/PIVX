@@ -1787,9 +1787,10 @@ bool CWallet::SelectStakeCoins(std::list<CStakeInput*>& listInputs, CAmount nTar
     //Add zPIV
     CWalletDB walletdb(strWalletFile);
     list<CZerocoinMint> listMints = walletdb.ListMintedCoins(true, true, true);
+    LogPrintf("%s : listmints size=%d\n", __func__, listMints.size());
     for (CZerocoinMint mint : listMints) {
-        if (mint.GetHeight() > chainActive.Height() - 100) {
-            CZPivStake* input = new CZPivStake(&mint);
+        if (mint.GetHeight() < chainActive.Height() - 200) {
+            CZPivStake* input = new CZPivStake(mint);
             listInputs.emplace_back(input);
         }
     }
@@ -2568,9 +2569,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         nLastStakeSetUpdate = GetTime();
     //}
     LogPrintf("%s: listInputs size=%d\n", __func__, listInputs.size());
-    //zPiv stake
-    CWalletDB walletdb(strWalletFile);
-    list<CZerocoinMint> listStakableZPiv = walletdb.ListMintedCoins(true, true, true);
 
     CAmount nCredit = 0;
     CScript scriptPubKeyKernel;
@@ -2578,11 +2576,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     for (CStakeInput* stakeInput : listInputs) {
         //make sure that enough time has elapsed between
         CBlockIndex* pindex = stakeInput->GetIndexFrom();
-        if (!pindex) {
+        if (!pindex || pindex->nHeight < 1) {
             LogPrintf("*** no pindexfrom\n");
             continue;
         }
-
+        LogPrintf("*** 2583 pindex height=%d\n", pindex->nHeight);
         // Read block header
         CBlockHeader block = pindex->GetBlockHeader();
 
@@ -2593,6 +2591,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         //iterates each utxo inside of CheckStakeKernelHash()
         nAttempts++;
         if (Stake(stakeInput, nBits, block.GetBlockTime(), nTxNewTime, hashProofOfStake)) {
+            LogPrintf("*** 2593\n");
             //Double check that this will pass time requirements
             if (nTxNewTime <= chainActive.Tip()->GetMedianTimePast()) {
                 LogPrintf("CreateCoinStake() : kernel found, but it is too far in the past \n");

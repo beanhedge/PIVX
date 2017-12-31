@@ -17,6 +17,14 @@ CBlockIndex* CZPivStake::GetIndexFrom()
     if (pindexFrom)
         return pindexFrom;
 
+    if (mint.GetSerialNumber() != 0) {
+        LogPrintf("%s : 21\n", __func__);
+        int nHeightChecksum = chainActive.Height() - 120;
+        nHeightChecksum -= (nHeightChecksum % 10);
+        pindexFrom = chainActive[nHeightChecksum];
+        return pindexFrom;
+    }
+
     uint32_t nChecksum = spend->getAccumulatorChecksum();
     int nHeightChecksum = GetChecksumHeight(nChecksum, spend->getDenomination());
     if (nHeightChecksum < Params().Zerocoin_StartHeight()) {
@@ -31,6 +39,9 @@ CBlockIndex* CZPivStake::GetIndexFrom()
 
 CAmount CZPivStake::GetValue()
 {
+    if (mint.GetSerialNumber() != 0)
+        return mint.GetDenomination() * COIN;
+
     return spend->getDenomination() * COIN;
 }
 
@@ -59,7 +70,17 @@ CDataStream CZPivStake::GetUniqueness()
 {
     //The unique identifier for a ZPIV is the serial
     CDataStream ss(SER_GETHASH, 0);
-    ss << spend->getCoinSerialNumber();
+    CBigNum bnSerial;
+    if (mint.GetSerialNumber() != 0) {
+        LogPrintf("%s mint\n", __func__);
+        bnSerial = mint.GetSerialNumber();
+        LogPrintf("%s mint2\n", __func__);
+    } else {
+        LogPrintf("%s spend\n", __func__);
+        bnSerial = spend->getCoinSerialNumber();
+    }
+
+    ss << bnSerial;
     return ss;
 }
 
@@ -68,7 +89,7 @@ bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
     CZerocoinSpendReceipt receipt;
     int nSecurityLevel = 5;
     uint256 hashTxOut = 0;
-    if (!pwallet->MintToTxIn(*mint, nSecurityLevel, hashTxOut, txIn, receipt))
+    if (!pwallet->MintToTxIn(mint, nSecurityLevel, hashTxOut, txIn, receipt))
         return error("%s\n", receipt.GetStatusMessage());
 
     return true;

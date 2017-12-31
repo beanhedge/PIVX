@@ -29,10 +29,10 @@ class CZPivStake : public CStakeInput
 {
 private:
     libzerocoin::CoinSpend* spend;
-    CZerocoinMint* mint;
+    CZerocoinMint mint;
 
 public:
-    explicit CZPivStake(CZerocoinMint* mint)
+    explicit CZPivStake(CZerocoinMint mint)
     {
         this->mint = mint;
     }
