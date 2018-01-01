@@ -2580,7 +2580,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             LogPrintf("*** no pindexfrom\n");
             continue;
         }
-        LogPrintf("*** 2583 pindex height=%d\n", pindex->nHeight);
+
         // Read block header
         CBlockHeader block = pindex->GetBlockHeader();
 

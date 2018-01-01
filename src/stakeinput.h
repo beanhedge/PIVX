@@ -25,21 +25,37 @@ public:
     virtual CDataStream GetUniqueness() = 0;
 };
 
+
+// zPIVStake can take two forms
+// 1) the stake candidate, which is a zcmint that is attempted to be staked
+// 2) a staked zpiv, which is a zcspend that has successfully staked
 class CZPivStake : public CStakeInput
 {
 private:
     libzerocoin::CoinSpend* spend;
     CZerocoinMint mint;
+    bool fMint;
+    libzerocoin::CoinDenomination denom;
+    CBigNum bnSerial;
+
 
 public:
     explicit CZPivStake(CZerocoinMint mint)
     {
         this->mint = mint;
+        this->denom = mint.GetDenomination();
+        this->bnSerial = mint.GetSerialNumber();
+        this->pindexFrom = nullptr;
+        fMint = true;
     }
 
     explicit CZPivStake(libzerocoin::CoinSpend spend)
     {
         this->spend = &spend;
+        this->denom = spend.getDenomination();
+        this->bnSerial = spend.getCoinSerialNumber();
+        this->pindexFrom = nullptr;
+        fMint = false;
     }
 
     CBlockIndex* GetIndexFrom() override;

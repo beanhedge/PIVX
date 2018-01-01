@@ -17,8 +17,8 @@ CBlockIndex* CZPivStake::GetIndexFrom()
     if (pindexFrom)
         return pindexFrom;
 
-    if (mint.GetSerialNumber() != 0) {
-        LogPrintf("%s : 21\n", __func__);
+
+    if (fMint) {
         int nHeightChecksum = chainActive.Height() - 120;
         nHeightChecksum -= (nHeightChecksum % 10);
         pindexFrom = chainActive[nHeightChecksum];
@@ -39,10 +39,7 @@ CBlockIndex* CZPivStake::GetIndexFrom()
 
 CAmount CZPivStake::GetValue()
 {
-    if (mint.GetSerialNumber() != 0)
-        return mint.GetDenomination() * COIN;
-
-    return spend->getDenomination() * COIN;
+    return denom * COIN;
 }
 
 //Use the first accumulator checkpoint that occurs 60 minutes after the block being staked from
@@ -68,24 +65,16 @@ bool CZPivStake::GetModifier(uint64_t& nStakeModifier)
 
 CDataStream CZPivStake::GetUniqueness()
 {
+    //LogPrintf("%s serial=%s\n", __func__, bnSerial.GetHex());
     //The unique identifier for a ZPIV is the serial
     CDataStream ss(SER_GETHASH, 0);
-    CBigNum bnSerial;
-    if (mint.GetSerialNumber() != 0) {
-        LogPrintf("%s mint\n", __func__);
-        bnSerial = mint.GetSerialNumber();
-        LogPrintf("%s mint2\n", __func__);
-    } else {
-        LogPrintf("%s spend\n", __func__);
-        bnSerial = spend->getCoinSerialNumber();
-    }
-
     ss << bnSerial;
     return ss;
 }
 
 bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
 {
+    LogPrintf("%s\n", __func__);
     CZerocoinSpendReceipt receipt;
     int nSecurityLevel = 5;
     uint256 hashTxOut = 0;
@@ -97,11 +86,13 @@ bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
 
 bool CZPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey)
 {
+    LogPrintf("%s\n", __func__);
     return true;
 }
 
 bool CZPivStake::GetTxFrom(CTransaction& tx)
 {
+    LogPrintf("%s\n", __func__);
     return false;
 }
 
