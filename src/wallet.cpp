@@ -2606,23 +2606,23 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 LogPrintf("%s : failed to create TxIn\n", __func__);
                 continue;
             }
+            txNew.vin.emplace_back(in);
 
-            txNew.vin.push_back(in);
-            nCredit += stakeInput->GetValue();
-
-            CScript scriptPubKey;
-            if (!stakeInput->GetScriptPubKeyTo(keystore, scriptPubKey)) {
+            CTxOut out;
+            if (!stakeInput->CreateTxOut(keystore, out)) {
                 LogPrintf("%s : failed to get scriptPubKey\n", __func__);
                 continue;
             }
-            txNew.vout.emplace_back(CTxOut(0, scriptPubKey));
+            txNew.vout.emplace_back(out);
+
+            nCredit += stakeInput->GetValue();
 
             //PIVX: calculate the total size of our new output including the stake reward so that we can use it to decide whether to split the stake outputs
-            CAmount nTotalSize = stakeInput->GetValue() + GetBlockValue(chainActive.Height() + 1);
+           // CAmount nTotalSize = stakeInput->GetValue() + GetBlockValue(chainActive.Height() + 1);
 
             //PIVX: If MultiSend is set to send in coinstake we will add our outputs here (values asigned further down)
-            if (nTotalSize / 2 > nStakeSplitThreshold * COIN)
-                txNew.vout.push_back(CTxOut(0, scriptPubKey)); //split stake
+            //if (nTotalSize / 2 > nStakeSplitThreshold * COIN)
+             //   txNew.vout.push_back(CTxOut(0, scriptPubKey)); //split stake
 
             fKernelFound = true;
             break;
@@ -2672,12 +2672,12 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     LogPrintf("line 2672\n");
     // Sign for PIV
     int nIn = 0;
-    for (CTxIn txIn : txNew.vin) {
-
-        const CWalletTx* wtx = GetWalletTx(txIn.prevout.hash);
-
-        if (!SignSignature(*this, *wtx, txNew, nIn++))
-            return error("CreateCoinStake : failed to sign coinstake");
+    if (!txNew.vin[0].scriptSig.IsZerocoinSpend()) {
+        for(CTxIn txIn : txNew.vin) {
+            const CWalletTx *wtx = GetWalletTx(txIn.prevout.hash);
+            if(!SignSignature(*this, *wtx, txNew, nIn++))
+                return error("CreateCoinStake : failed to sign coinstake");
+        }
     }
     LogPrintf("line 2680\n");
     // Successfully generated coinstake

@@ -84,9 +84,11 @@ bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
     return true;
 }
 
-bool CZPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey)
+bool CZPivStake::CreateTxOut(const CKeyStore& keystore, CTxOut& out)
 {
     LogPrintf("%s\n", __func__);
+
+
     return true;
 }
 
@@ -122,7 +124,7 @@ CAmount CPivStake::GetValue()
     return txFrom.vout[nPosition].nValue;
 }
 
-bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubKey)
+bool CPivStake::CreateTxOut(const CKeyStore& keystore, CTxOut& out)
 {
     vector<valtype> vSolutions;
     txnouttype whichType;
@@ -135,6 +137,7 @@ bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubK
     if (whichType != TX_PUBKEY && whichType != TX_PUBKEYHASH)
         return false; // only support pay to public key and pay to address
 
+    CScript scriptPubKey;
     if (whichType == TX_PUBKEYHASH) // pay to address type
     {
         //convert to pay to public key type
@@ -146,6 +149,7 @@ bool CPivStake::GetScriptPubKeyTo(const CKeyStore& keystore, CScript& scriptPubK
     } else
         scriptPubKey = scriptPubKeyKernel;
 
+    out = CTxOut(0, scriptPubKey);
     return true;
 }
 
