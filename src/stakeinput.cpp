@@ -87,7 +87,7 @@ bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
 bool CZPivStake::CreateTxOut(const CKeyStore& keystore, CTxOut& out)
 {
     LogPrintf("%s\n", __func__);
-
+    //add mints here
 
     return true;
 }

@@ -2601,13 +2601,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             // Found a kernel
             LogPrintf("CreateCoinStake : kernel found\n");
 
-            CTxIn in;
-            if (!stakeInput->CreateTxIn(this, in)) {
-                LogPrintf("%s : failed to create TxIn\n", __func__);
-                continue;
-            }
-            txNew.vin.emplace_back(in);
-
             CTxOut out;
             if (!stakeInput->CreateTxOut(keystore, out)) {
                 LogPrintf("%s : failed to get scriptPubKey\n", __func__);
@@ -2624,6 +2617,49 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             //if (nTotalSize / 2 > nStakeSplitThreshold * COIN)
              //   txNew.vout.push_back(CTxOut(0, scriptPubKey)); //split stake
 
+            // Calculate reward
+            CAmount nReward;
+            nReward = GetBlockValue(chainActive.Height() + 1);
+            nCredit += nReward;
+            LogPrintf("line 2642\n");
+            CAmount nMinFee = 0;
+            while (true) {
+                // Set output amount
+                if (txNew.vout.size() == 3) {
+                    txNew.vout[1].nValue = ((nCredit - nMinFee) / 2 / CENT) * CENT;
+                    txNew.vout[2].nValue = nCredit - nMinFee - txNew.vout[1].nValue;
+                } else
+                    txNew.vout[1].nValue = nCredit - nMinFee;
+
+                // Limit size
+                unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, PROTOCOL_VERSION);
+                if (nBytes >= DEFAULT_BLOCK_MAX_SIZE / 5)
+                    return error("CreateCoinStake : exceeded coinstake size limit");
+
+                CAmount nFeeNeeded = GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
+
+                // Check enough fee is paid
+                if (nMinFee < nFeeNeeded) {
+                    nMinFee = nFeeNeeded;
+                    continue; // try signing again
+                } else {
+                    if (fDebug)
+                        LogPrintf("CreateCoinStake : fee for coinstake %s\n", FormatMoney(nMinFee).c_str());
+                    break;
+                }
+            }
+
+            //Masternode payment
+            FillBlockPayee(txNew, nMinFee, true);
+            LogPrintf("line 2672\n");
+
+            CTxIn in;
+            if (!stakeInput->CreateTxIn(this, in)) {
+                LogPrintf("%s : failed to create TxIn\n", __func__);
+                continue;
+            }
+            txNew.vin.emplace_back(in);
+
             fKernelFound = true;
             break;
         }
@@ -2635,41 +2671,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         return false;
     }
 
-    // Calculate reward
-    CAmount nReward;
-    nReward = GetBlockValue(chainActive.Height() + 1);
-    nCredit += nReward;
-    LogPrintf("line 2642\n");
-    CAmount nMinFee = 0;
-    while (true) {
-        // Set output amount
-        if (txNew.vout.size() == 3) {
-            txNew.vout[1].nValue = ((nCredit - nMinFee) / 2 / CENT) * CENT;
-            txNew.vout[2].nValue = nCredit - nMinFee - txNew.vout[1].nValue;
-        } else
-            txNew.vout[1].nValue = nCredit - nMinFee;
 
-        // Limit size
-        unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, PROTOCOL_VERSION);
-        if (nBytes >= DEFAULT_BLOCK_MAX_SIZE / 5)
-            return error("CreateCoinStake : exceeded coinstake size limit");
-
-        CAmount nFeeNeeded = GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
-
-        // Check enough fee is paid
-        if (nMinFee < nFeeNeeded) {
-            nMinFee = nFeeNeeded;
-            continue; // try signing again
-        } else {
-            if (fDebug)
-                LogPrintf("CreateCoinStake : fee for coinstake %s\n", FormatMoney(nMinFee).c_str());
-            break;
-        }
-    }
-
-    //Masternode payment
-    FillBlockPayee(txNew, nMinFee, true);
-    LogPrintf("line 2672\n");
     // Sign for PIV
     int nIn = 0;
     if (!txNew.vin[0].scriptSig.IsZerocoinSpend()) {
