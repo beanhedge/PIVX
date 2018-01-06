@@ -3976,7 +3976,8 @@ bool CWallet::CreateZerocoinMintTransaction(const CAmount nValue, CMutableTransa
         txNew.vout.push_back(outMint);
 
         //store as CZerocoinMint for later use
-        CZerocoinMint mint(denomination, pubCoin.getValue(), newCoin.getRandomness(), newCoin.getSerialNumber(), false);
+        CPrivKey privKey = newCoin.getPrivKey();
+        CZerocoinMint mint(denomination, pubCoin.getValue(), newCoin.getRandomness(), newCoin.getSerialNumber(), false, newCoin.getVersion(), &privKey);
         vMints.push_back(mint);
     }
 

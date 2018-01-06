@@ -8,6 +8,7 @@
 #include <limits.h>
 #include "libzerocoin/bignum.h"
 #include "libzerocoin/Denominations.h"
+#include "key.h"
 #include "serialize.h"
 
 class CZerocoinMint
@@ -19,6 +20,8 @@ private:
     CBigNum randomness;
     CBigNum serialNumber;
     uint256 txid;
+    CPrivKey privkey;
+    uint8_t nVersion;
     bool isUsed;
 
 public:
@@ -27,7 +30,7 @@ public:
         SetNull();
     }
 
-    CZerocoinMint(libzerocoin::CoinDenomination denom, CBigNum value, CBigNum randomness, CBigNum serialNumber, bool isUsed)
+    CZerocoinMint(libzerocoin::CoinDenomination denom, const CBigNum& value, const CBigNum& randomness, const CBigNum& serialNumber, bool isUsed, const uint8_t& nVersion, CPrivKey* privkey = nullptr)
     {
         SetNull();
         this->denomination = denom;
@@ -35,6 +38,9 @@ public:
         this->randomness = randomness;
         this->serialNumber = serialNumber;
         this->isUsed = isUsed;
+        this->nVersion = nVersion;
+        if (privkey)
+            this->privkey = *privkey;
     }
 
     void SetNull()
@@ -45,6 +51,8 @@ public:
         denomination = libzerocoin::ZQ_ERROR;
         nHeight = 0;
         txid = 0;
+        nVersion = 0;
+        privkey.clear();
     }
 
     uint256 GetHash() const;
@@ -114,6 +122,10 @@ public:
         READWRITE(denomination);
         READWRITE(nHeight);
         READWRITE(txid);
+        if (this->nVersion >= 2) {
+            READWRITE(this->nVersion);
+            READWRITE(privkey);
+        }
     };
 };
 

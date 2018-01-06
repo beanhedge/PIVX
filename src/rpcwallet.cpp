@@ -2751,7 +2751,7 @@ Value importzerocoins(const Array& params, bool fHelp)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, h must be positive");
 
         bool fUsed = ParseBool(o, "u");
-        CZerocoinMint mint(denom, bnValue, bnRandom, bnSerial, fUsed);
+        CZerocoinMint mint(denom, bnValue, bnRandom, bnSerial, fUsed, 1, nullptr);
         mint.SetTxHash(txid);
         mint.SetHeight(nHeight);
         walletdb.WriteZerocoinMint(mint);
