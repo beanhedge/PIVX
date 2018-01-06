@@ -2600,22 +2600,13 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
             // Found a kernel
             LogPrintf("CreateCoinStake : kernel found\n");
-
+            nCredit += stakeInput->GetValue();
             CTxOut out;
             if (!stakeInput->CreateTxOut(keystore, out)) {
                 LogPrintf("%s : failed to get scriptPubKey\n", __func__);
                 continue;
             }
             txNew.vout.emplace_back(out);
-
-            nCredit += stakeInput->GetValue();
-
-            //PIVX: calculate the total size of our new output including the stake reward so that we can use it to decide whether to split the stake outputs
-           // CAmount nTotalSize = stakeInput->GetValue() + GetBlockValue(chainActive.Height() + 1);
-
-            //PIVX: If MultiSend is set to send in coinstake we will add our outputs here (values asigned further down)
-            //if (nTotalSize / 2 > nStakeSplitThreshold * COIN)
-             //   txNew.vout.push_back(CTxOut(0, scriptPubKey)); //split stake
 
             // Calculate reward
             CAmount nReward;
@@ -2653,8 +2644,9 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             FillBlockPayee(txNew, nMinFee, true);
             LogPrintf("line 2672\n");
 
+            uint256 hashTxOut = txNew.GetHash();
             CTxIn in;
-            if (!stakeInput->CreateTxIn(this, in)) {
+            if (!stakeInput->CreateTxIn(this, in, hashTxOut)) {
                 LogPrintf("%s : failed to create TxIn\n", __func__);
                 continue;
             }

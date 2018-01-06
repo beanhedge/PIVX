@@ -17,7 +17,7 @@ protected:
 public:
     virtual ~CStakeInput(){};
     virtual CBlockIndex* GetIndexFrom() = 0;
-    virtual bool CreateTxIn(CWallet* pwallet, CTxIn& txIn) = 0;
+    virtual bool CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut = 0) = 0;
     virtual bool GetTxFrom(CTransaction& tx) = 0;
     virtual CAmount GetValue() = 0;
     virtual bool CreateTxOut(const CKeyStore& keystore, CTxOut& out) = 0;
@@ -63,7 +63,7 @@ public:
     CAmount GetValue() override;
     bool GetModifier(uint64_t& nStakeModifier) override;
     CDataStream GetUniqueness() override;
-    bool CreateTxIn(CWallet* pwallet, CTxIn& txIn) override;
+    bool CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut = 0) override;
     bool CreateTxOut(const CKeyStore& keystore, CTxOut& out) override;
 };
 
@@ -85,7 +85,7 @@ public:
     CAmount GetValue() override;
     bool GetModifier(uint64_t& nStakeModifier) override;
     CDataStream GetUniqueness() override;
-    bool CreateTxIn(CWallet* pwallet, CTxIn& txIn) override;
+    bool CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut = 0) override;
     bool CreateTxOut(const CKeyStore& keystore, CTxOut& out) override;
 };
 

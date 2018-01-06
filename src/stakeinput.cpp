@@ -72,12 +72,11 @@ CDataStream CZPivStake::GetUniqueness()
     return ss;
 }
 
-bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
+bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut)
 {
     LogPrintf("%s\n", __func__);
     CZerocoinSpendReceipt receipt;
     int nSecurityLevel = 5;
-    uint256 hashTxOut = 0;
     if (!pwallet->MintToTxIn(mint, nSecurityLevel, hashTxOut, txIn, receipt))
         return error("%s\n", receipt.GetStatusMessage());
 
@@ -113,7 +112,7 @@ bool CPivStake::GetTxFrom(CTransaction& tx)
     return true;
 }
 
-bool CPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn)
+bool CPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut)
 {
     txIn = CTxIn(txFrom.GetHash(), nPosition);
     return true;
