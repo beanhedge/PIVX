@@ -100,11 +100,13 @@ public:
     const CBigNum& getSerialNumber() const { return this->serialNumber; }
     const CBigNum& getRandomness() const { return this->randomness; }
     const CPrivKey& getPrivKey() const { return this->privkey; }
+    const CPubKey& getPubKey() const;
     const uint8_t& getVersion() const { return this->version; }
 
     void setPublicCoin(PublicCoin p) { publicCoin = p; }
     void setRandomness(Bignum n) { randomness = n; }
     void setSerialNumber(Bignum n) { serialNumber = n; }
+    bool sign(const uint256& hash, std::vector<unsigned char>& vchSig) const;
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>

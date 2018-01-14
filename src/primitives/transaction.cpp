@@ -199,14 +199,9 @@ CAmount CTransaction::GetZerocoinSpent() const
     CAmount nValueOut = 0;
     for (const CTxIn txin : vin) {
         if(!txin.scriptSig.IsZerocoinSpend())
-            LogPrintf("%s is not zcspend\n", __func__);
+            continue;
 
-        std::vector<char, zero_after_free_allocator<char> > dataTxIn;
-        dataTxIn.insert(dataTxIn.end(), txin.scriptSig.begin() + 4, txin.scriptSig.end());
-
-        CDataStream serializedCoinSpend(dataTxIn, SER_NETWORK, PROTOCOL_VERSION);
-        libzerocoin::CoinSpend spend(Params().Zerocoin_Params(), serializedCoinSpend);
-        nValueOut += libzerocoin::ZerocoinDenominationToAmount(spend.getDenomination());
+        nValueOut += txin.nSequence * COIN;
     }
 
     return nValueOut;

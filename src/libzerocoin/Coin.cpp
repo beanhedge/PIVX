@@ -85,6 +85,20 @@ inline void GenerateKeyPair(const CBigNum& bnGroupOrder, CKey& key, CBigNum& bnS
 	}
 }
 
+const CPubKey& PrivateCoin::getPubKey() const
+{
+	CKey key;
+	key.SetPrivKey(privkey, true);
+	return key.GetPubKey();
+}
+
+bool PrivateCoin::sign(const uint256& hash, vector<unsigned char>& vchSig) const
+{
+	CKey key;
+	key.SetPrivKey(privkey, true);
+	return key.Sign(hash, vchSig);
+}
+
 void PrivateCoin::mintCoin(const CoinDenomination denomination) {
 	// Repeat this process up to MAX_COINMINT_ATTEMPTS times until
 	// we obtain a prime number
