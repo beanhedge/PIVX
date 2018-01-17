@@ -14,6 +14,7 @@
 #ifndef COINSPEND_H_
 #define COINSPEND_H_
 
+#include <iostream>
 #include "Accumulator.h"
 #include "AccumulatorProofOfKnowledge.h"
 #include "Coin.h"
@@ -38,7 +39,6 @@ public:
                                                        serialNumberSoK(p),
                                                        commitmentPoK(&p->serialNumberSoKCommitmentGroup, &p->accumulatorParams.accumulatorPoKCommitmentGroup), version(nVersion)
     {
-        version = nVersion;
         strm >> *this;
     }
     /**Generates a proof spending a zerocoin.
@@ -92,6 +92,7 @@ public:
     uint256 getTxOutHash() const { return ptxHash; }
     CBigNum getAccCommitment() const { return accCommitmentToCoinValue; }
     CBigNum getSerialComm() const { return serialCommitmentToCoinValue; }
+    uint8_t getVersion() const { return version; }
 
     bool Verify(const Accumulator& a) const;
     bool HasValidSerial(ZerocoinParams* params) const;
@@ -111,7 +112,6 @@ public:
         READWRITE(serialNumberSoK);
         READWRITE(commitmentPoK);
         if (version >= 2) {
-            READWRITE(version);
             READWRITE(pubkey);
             READWRITE(vchSig);
         }

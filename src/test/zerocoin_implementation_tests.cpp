@@ -7,6 +7,7 @@
 #include "chainparams.h"
 #include "main.h"
 #include "txdb.h"
+#include "../main.h"
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 #include <accumulators.h>
@@ -215,7 +216,7 @@ BOOST_AUTO_TEST_CASE(checkzerocoinspend_test)
     //Get the checksum of the accumulator we use for the spend and also add it to our checksum map
     uint32_t nChecksum = GetChecksum(accumulator.getValue());
     AddAccumulatorChecksum(nChecksum, accumulator.getValue(), true);
-    CoinSpend coinSpend(Params().Zerocoin_Params(), privateCoin, accumulator, nChecksum, witness, 0);
+    CoinSpend coinSpend(Params().Zerocoin_Params(), privateCoin, accumulator, nChecksum, witness, 0, 1);
 
     CBigNum serial = coinSpend.getCoinSerialNumber();
     BOOST_CHECK_MESSAGE(serial, "Serial Number can't be 0");
@@ -226,7 +227,14 @@ BOOST_AUTO_TEST_CASE(checkzerocoinspend_test)
 
     //serialize the spend
     CDataStream serializedCoinSpend2(SER_NETWORK, PROTOCOL_VERSION);
-    serializedCoinSpend2 << coinSpend;
+    bool fSerialize = true;
+    try {
+        serializedCoinSpend2 << coinSpend;
+    } catch (...) {
+        fSerialize = false;
+    }
+    BOOST_CHECK_MESSAGE(fSerialize, "failed to serialize coinspend object");
+
     std::vector<unsigned char> data(serializedCoinSpend2.begin(), serializedCoinSpend2.end());
 
     /** Check valid spend */

@@ -14,6 +14,7 @@
 #include <iostream>
 namespace libzerocoin
 {
+
 CoinSpend::CoinSpend(const ZerocoinParams* p, const PrivateCoin& coin, Accumulator& a, const uint32_t checksum,
                      const AccumulatorWitness& witness, const uint256& ptxHash, uint8_t nVersion) : accChecksum(checksum),
                                                                                   ptxHash(ptxHash),
