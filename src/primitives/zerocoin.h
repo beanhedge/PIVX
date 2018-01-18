@@ -85,6 +85,7 @@ public:
         serialNumber = other.GetSerialNumber();
         txid = other.GetTxHash();
         isUsed = other.IsUsed();
+        nVersion = other.GetVersion();
     }
 
     bool operator == (const CZerocoinMint& other) const
@@ -101,6 +102,7 @@ public:
         serialNumber = other.GetSerialNumber();
         txid = other.GetTxHash();
         isUsed = other.IsUsed();
+        nVersion = other.GetVersion();
         return *this;
     }
     
