@@ -3,6 +3,18 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "primitives/zerocoin.h"
+#include "../key.h"
+
+bool CZerocoinMint::GetPrivKey(CKey& key) const
+{
+    if (nVersion < 2)
+        return false;
+
+    if (privkey.empty())
+        return false;
+
+    return key.SetPrivKey(privkey, true);
+}
 
 void CZerocoinSpendReceipt::AddSpend(const CZerocoinSpend& spend)
 {

@@ -106,6 +106,8 @@ public:
     void setPublicCoin(PublicCoin p) { publicCoin = p; }
     void setRandomness(Bignum n) { randomness = n; }
     void setSerialNumber(Bignum n) { serialNumber = n; }
+    void setVersion(uint8_t nVersion) { this->version = nVersion; }
+    void setPrivKey(const CPrivKey& privkey) { this->privkey = privkey; }
     bool sign(const uint256& hash, std::vector<unsigned char>& vchSig) const;
 
     ADD_SERIALIZE_METHODS;

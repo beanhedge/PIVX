@@ -1752,43 +1752,45 @@ bool less_then_denom(const COutput& out1, const COutput& out2)
 bool CWallet::SelectStakeCoins(std::list<CStakeInput*>& listInputs, CAmount nTargetAmount) const
 {
     //Add PIV
-//    vector<COutput> vCoins;
-//    AvailableCoins(vCoins, true, NULL, false, STAKABLE_COINS);
-//    CAmount nAmountSelected = 0;
-//    for (const COutput& out : vCoins) {
-//        //make sure not to outrun target amount
-//        if (nAmountSelected + out.tx->vout[out.i].nValue > nTargetAmount)
-//            continue;
-//
-//        //if zerocoinspend, then use the block time
-//        int64_t nTxTime = out.tx->GetTxTime();
-//        if (out.tx->IsZerocoinSpend()) {
-//            if (!out.tx->IsInMainChain())
-//                continue;
-//            nTxTime = mapBlockIndex.at(out.tx->hashBlock)->GetBlockTime();
-//        }
-//
-//        //check for min age
-//        if (GetAdjustedTime() - nTxTime < nStakeMinAge)
-//            continue;
-//
-//        //check that it is matured
-//        if (out.nDepth < (out.tx->IsCoinStake() ? Params().COINBASE_MATURITY() : 10))
-//            continue;
-//
-//        //add to our stake set
-//        nAmountSelected += out.tx->vout[out.i].nValue;
-//
-//        CPivStake* input = new CPivStake();
-//        input->SetInput(make_pair((CTransaction*)out.tx, out.i));
-//        listInputs.emplace_back((CStakeInput*)input);
-//    }
+    vector<COutput> vCoins;
+    AvailableCoins(vCoins, true, NULL, false, STAKABLE_COINS);
+    CAmount nAmountSelected = 0;
+    for (const COutput& out : vCoins) {
+        //make sure not to outrun target amount
+        if (nAmountSelected + out.tx->vout[out.i].nValue > nTargetAmount)
+            continue;
+
+        //if zerocoinspend, then use the block time
+        int64_t nTxTime = out.tx->GetTxTime();
+        if (out.tx->IsZerocoinSpend()) {
+            if (!out.tx->IsInMainChain())
+                continue;
+            nTxTime = mapBlockIndex.at(out.tx->hashBlock)->GetBlockTime();
+        }
+
+        //check for min age
+        if (GetAdjustedTime() - nTxTime < nStakeMinAge)
+            continue;
+
+        //check that it is matured
+        if (out.nDepth < (out.tx->IsCoinStake() ? Params().COINBASE_MATURITY() : 10))
+            continue;
+
+        //add to our stake set
+        nAmountSelected += out.tx->vout[out.i].nValue;
+
+        CPivStake* input = new CPivStake();
+        input->SetInput((CTransaction)*out.tx, out.i);
+        listInputs.emplace_back((CStakeInput*)input);
+    }
 
     //Add zPIV
     CWalletDB walletdb(strWalletFile);
     list<CZerocoinMint> listMints = walletdb.ListMintedCoins(true, true, true);
     LogPrintf("%s : listmints size=%d\n", __func__, listMints.size());
     for (CZerocoinMint mint : listMints) {
+        if (mint.GetVersion() < 2)
+            continue;
         if (mint.GetHeight() < chainActive.Height() - 200) {
             CZPivStake* input = new CZPivStake(mint);
             listInputs.emplace_back(input);
@@ -2568,6 +2570,8 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
         nLastStakeSetUpdate = GetTime();
     //}
+    if (listInputs.empty())
+        return false;
     LogPrintf("%s: listInputs size=%d\n", __func__, listInputs.size());
 
     CAmount nCredit = 0;
@@ -3934,6 +3938,16 @@ bool CMerkleTx::IsTransactionLockTimedOut() const
     return false;
 }
 
+bool CWallet::GetZerocoinKey(const CBigNum& bnSerial, CKey& key)
+{
+    CWalletDB walletdb(strWalletFile);
+    CZerocoinMint mint;
+    if (!walletdb.ReadZerocoinMint(bnSerial, mint))
+        return false;
+
+    return mint.GetPrivKey(key);
+}
+
 bool CWallet::CreateZerocoinMintTransaction(const CAmount nValue, CMutableTransaction& txNew, vector<CZerocoinMint>& vMints, CReserveKey* reservekey, int64_t& nFeeRet, std::string& strFailReason, const CCoinControl* coinControl, const bool isZCSpendChange)
 {
     if (IsLocked()) {
@@ -4073,6 +4087,17 @@ bool CWallet::MintToTxIn(CZerocoinMint zerocoinSelected, int nSecurityLevel, con
     privateCoin.setPublicCoin(pubCoinSelected);
     privateCoin.setRandomness(zerocoinSelected.GetRandomness());
     privateCoin.setSerialNumber(zerocoinSelected.GetSerialNumber());
+
+    //Version 2 zerocoins have a privkey associated with them
+    uint8_t nVersion = zerocoinSelected.GetVersion();
+    privateCoin.setVersion(zerocoinSelected.GetVersion());
+    if (nVersion >= 2) {
+        CKey key;
+        if (!zerocoinSelected.GetPrivKey(key))
+            return error("%s: failed to set zPIV privkey", __func__);
+        privateCoin.setPrivKey(key.GetPrivKey());
+    }
+
     uint32_t nChecksum = GetChecksum(accumulator.getValue());
 
     try {

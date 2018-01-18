@@ -208,6 +208,7 @@ public:
     std::string ResetSpentZerocoin();
     void ReconsiderZerocoins(std::list<CZerocoinMint>& listMintsRestored);
     void ZPivBackupWallet();
+    bool GetZerocoinKey(const CBigNum& bnSerial, CKey& key);
 
     /** Zerocin entry changed.
     * @note called with lock cs_wallet held.

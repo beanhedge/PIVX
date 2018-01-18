@@ -72,6 +72,8 @@ public:
     void SetSerialNumber(CBigNum serial){ this->serialNumber = serial; }
     uint256 GetTxHash() const { return this->txid; }
     void SetTxHash(uint256 txid) { this->txid = txid; }
+    uint8_t GetVersion() const { return this->nVersion; }
+    bool GetPrivKey(CKey& key) const;
 
     inline bool operator <(const CZerocoinMint& a) const { return GetHeight() < a.GetHeight(); }
 
