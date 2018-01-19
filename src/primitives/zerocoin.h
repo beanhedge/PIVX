@@ -21,7 +21,7 @@ private:
     CBigNum serialNumber;
     uint256 txid;
     CPrivKey privkey;
-    uint8_t nVersion;
+    uint8_t version;
     bool isUsed;
 
 public:
@@ -38,7 +38,7 @@ public:
         this->randomness = randomness;
         this->serialNumber = serialNumber;
         this->isUsed = isUsed;
-        this->nVersion = nVersion;
+        this->version = nVersion;
         if (privkey)
             this->privkey = *privkey;
     }
@@ -51,7 +51,7 @@ public:
         denomination = libzerocoin::ZQ_ERROR;
         nHeight = 0;
         txid = 0;
-        nVersion = 0;
+        version = 0;
         privkey.clear();
     }
 
@@ -72,7 +72,7 @@ public:
     void SetSerialNumber(CBigNum serial){ this->serialNumber = serial; }
     uint256 GetTxHash() const { return this->txid; }
     void SetTxHash(uint256 txid) { this->txid = txid; }
-    uint8_t GetVersion() const { return this->nVersion; }
+    uint8_t GetVersion() const { return this->version; }
     bool GetPrivKey(CKey& key) const;
 
     inline bool operator <(const CZerocoinMint& a) const { return GetHeight() < a.GetHeight(); }
@@ -85,7 +85,7 @@ public:
         serialNumber = other.GetSerialNumber();
         txid = other.GetTxHash();
         isUsed = other.IsUsed();
-        nVersion = other.GetVersion();
+        version = other.GetVersion();
     }
 
     bool operator == (const CZerocoinMint& other) const
@@ -102,7 +102,7 @@ public:
         serialNumber = other.GetSerialNumber();
         txid = other.GetTxHash();
         isUsed = other.IsUsed();
-        nVersion = other.GetVersion();
+        version = other.GetVersion();
         return *this;
     }
     
@@ -126,8 +126,21 @@ public:
         READWRITE(denomination);
         READWRITE(nHeight);
         READWRITE(txid);
-        if (this->nVersion >= 2) {
-            READWRITE(this->nVersion);
+
+        bool fVersionedMint = true;
+        try {
+            READWRITE(version);
+        } catch (...) {
+            fVersionedMint = false;
+
+        }
+
+        if (version > 2) {
+            version = 0;
+            fVersionedMint = false;
+        }
+
+        if (fVersionedMint) {
             READWRITE(privkey);
         }
     };

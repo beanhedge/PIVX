@@ -3991,7 +3991,9 @@ bool CWallet::CreateZerocoinMintTransaction(const CAmount nValue, CMutableTransa
 
         //store as CZerocoinMint for later use
         CPrivKey privKey = newCoin.getPrivKey();
+        LogPrintf("****privcoin version=%d\n", newCoin.getVersion());
         CZerocoinMint mint(denomination, pubCoin.getValue(), newCoin.getRandomness(), newCoin.getSerialNumber(), false, newCoin.getVersion(), &privKey);
+        LogPrintf("**** mint version=%d\n", mint.GetVersion());
         vMints.push_back(mint);
     }
 
@@ -4094,7 +4096,7 @@ bool CWallet::MintToTxIn(CZerocoinMint zerocoinSelected, int nSecurityLevel, con
     if (nVersion >= 2) {
         CKey key;
         if (!zerocoinSelected.GetPrivKey(key))
-            return error("%s: failed to set zPIV privkey", __func__);
+            return error("%s: failed to set zPIV privkey mint version=%d", __func__, nVersion);
         privateCoin.setPrivKey(key.GetPrivKey());
     }
 

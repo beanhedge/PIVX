@@ -7,7 +7,7 @@
 
 bool CZerocoinMint::GetPrivKey(CKey& key) const
 {
-    if (nVersion < 2)
+    if (version < 2)
         return false;
 
     if (privkey.empty())
