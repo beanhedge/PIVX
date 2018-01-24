@@ -587,6 +587,7 @@ void BitcoinMiner(CWallet* pwallet, bool fProofOfStake)
                     LogPrintf("BitcoinMiner(): Signing new block with zPIV key failed \n");
                     continue;
                 }
+                LogPrintf("%s: signed block with zpiv key!", __func__);
             } else if (!SignBlock(*pblock, *pwallet)) {
                 LogPrintf("BitcoinMiner(): Signing new block with UTXO key failed \n");
                 continue;

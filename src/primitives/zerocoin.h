@@ -73,7 +73,8 @@ public:
     uint256 GetTxHash() const { return this->txid; }
     void SetTxHash(uint256 txid) { this->txid = txid; }
     uint8_t GetVersion() const { return this->version; }
-    bool GetPrivKey(CKey& key) const;
+    CPrivKey GetPrivKey() const { return this->privkey; }
+    bool GetKeyPair(CKey& key) const;
 
     inline bool operator <(const CZerocoinMint& a) const { return GetHeight() < a.GetHeight(); }
 
@@ -86,7 +87,10 @@ public:
         txid = other.GetTxHash();
         isUsed = other.IsUsed();
         version = other.GetVersion();
+        privkey = other.privkey;
     }
+
+    std::string ToString() const;
 
     bool operator == (const CZerocoinMint& other) const
     {
@@ -103,6 +107,7 @@ public:
         txid = other.GetTxHash();
         isUsed = other.IsUsed();
         version = other.GetVersion();
+        privkey = other.GetPrivKey();
         return *this;
     }
     

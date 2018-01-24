@@ -64,6 +64,27 @@ std::vector<std::pair<std::string, std::string> > vecRawMints = {std::make_pair(
 //create a zerocoin mint from vecsend
 BOOST_AUTO_TEST_CASE(checkzerocoinmint_test)
 {
+    cout << "generating privkeys\n";
+
+    //generate a privkey
+    CKey key;
+    key.MakeNewKey(true);
+    CPrivKey privkey = key.GetPrivKey();
+
+    //generate pubkey hash/serial
+    CPubKey pubkey = key.GetPubKey();
+    uint256 nSerial = Hash(pubkey.begin(), pubkey.end());
+    CBigNum bnSerial(nSerial);
+
+    //make sure privkey import to new keypair makes the same serial
+    CKey key2;
+    key2.SetPrivKey(privkey, true);
+    CPubKey pubkey2 = key2.GetPubKey();
+    uint256 nSerial2 = Hash(pubkey2.begin(), pubkey2.end());
+    CBigNum bnSerial2(nSerial2);
+    BOOST_CHECK_MESSAGE(bnSerial == bnSerial2, "Serials do not match!");
+
+
     cout << "Running check_zerocoinmint_test...\n";
     CTransaction tx;
     BOOST_CHECK(DecodeHexTx(tx, rawTx1));

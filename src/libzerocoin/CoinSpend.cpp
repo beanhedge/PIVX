@@ -63,6 +63,7 @@ CoinSpend::CoinSpend(const ZerocoinParams* p, const PrivateCoin& coin, Accumulat
         this->pubkey = coin.getPubKey();
         if (!coin.sign(hashSig, this->vchSig))
             throw std::runtime_error("Coinspend failed to sign signature hash");
+        LogPrintf("***Signed hash\n");
     }
 }
 

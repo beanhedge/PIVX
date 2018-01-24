@@ -2697,6 +2697,11 @@ Value exportzerocoins(const Array& params, bool fHelp)
         objMint.emplace_back(Pair("t", mint.GetTxHash().GetHex()));
         objMint.emplace_back(Pair("h", mint.GetHeight()));
         objMint.emplace_back(Pair("u", mint.IsUsed()));
+        objMint.emplace_back(Pair("v", mint.GetVersion()));
+        if (mint.GetVersion() >= 2) {
+            objMint.emplace_back(Pair("pk", HexStr(mint.GetPrivKey())));
+        }
+
         jsonList.emplace_back(objMint);
     }
 

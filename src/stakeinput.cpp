@@ -83,10 +83,13 @@ bool CZPivStake::CreateTxIn(CWallet* pwallet, CTxIn& txIn, uint256 hashTxOut)
     return true;
 }
 
-bool CZPivStake::CreateTxOut(const CKeyStore& keystore, CTxOut& out)
+bool CZPivStake::CreateTxOut(CWallet* pwallet, CTxOut& out)
 {
     LogPrintf("%s\n", __func__);
-    //add mints here
+    //todo: add mints here
+    CPubKey pubkey = pwallet->GenerateNewKey();
+    CScript scriptPubKey = GetScriptForDestination(pubkey.GetID());
+    out = CTxOut(0, scriptPubKey);
 
     return true;
 }
@@ -123,7 +126,7 @@ CAmount CPivStake::GetValue()
     return txFrom.vout[nPosition].nValue;
 }
 
-bool CPivStake::CreateTxOut(const CKeyStore& keystore, CTxOut& out)
+bool CPivStake::CreateTxOut(CWallet* pwallet, CTxOut& out)
 {
     vector<valtype> vSolutions;
     txnouttype whichType;
@@ -141,7 +144,7 @@ bool CPivStake::CreateTxOut(const CKeyStore& keystore, CTxOut& out)
     {
         //convert to pay to public key type
         CKey key;
-        if (!keystore.GetKey(uint160(vSolutions[0]), key))
+        if (!pwallet->GetKey(uint160(vSolutions[0]), key))
             return false;
 
         scriptPubKey << key.GetPubKey() << OP_CHECKSIG;

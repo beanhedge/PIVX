@@ -52,21 +52,24 @@ bool SignBlock(CBlock& block, const CKeyStore& keystore)
 
 bool CheckBlockSignature(const CBlock& block)
 {
+    LogPrintf("%s 55\n", __func__);
     if (block.IsProofOfWork())
         return block.vchBlockSig.empty();
-
+    LogPrintf("%s 58\n", __func__);
     if (block.vchBlockSig.empty())
-        return false;
-
+        return error("%s: vchBlockSig is empty!", __func__);
+    LogPrintf("%s 61\n", __func__);
     /** Each block is signed by the private key of the input that is staked. This can be either zPIV or normal UTXO
      *  zPIV: Each zPIV has a keypair associated with it. The serial number is a hash of the public key.
      *  UTXO: The public key that signs must match the public key associated with the first utxo of the coinstake tx.
      */
     CPubKey pubkey;
     bool fzPIVStake = block.vtx[1].IsZerocoinSpend();
+    LogPrintf("%s 68\n", __func__);
     if (fzPIVStake) {
         libzerocoin::CoinSpend spend = TxInToZerocoinSpend(block.vtx[1].vin[0]);
         pubkey = spend.getPubKey();
+        LogPrintf("%s spend version=%d\n", __func__, spend.getVersion());
     } else {
         txnouttype whichType;
         std::vector<valtype> vSolutions;
@@ -77,10 +80,11 @@ bool CheckBlockSignature(const CBlock& block)
             valtype& vchPubKey = vSolutions[0];
             pubkey = CPubKey(vchPubKey);
         }
+        LogPrintf("%s 83\n", __func__);
     }
-
+    LogPrintf("%s 85\n", __func__);
     if (!pubkey.IsValid())
-        return false;
-
+        return error("%s: invalid pubkey %s", __func__, pubkey.GetHex());
+    LogPrintf("%s 88\n", __func__);
     return pubkey.Verify(block.GetHash(), block.vchBlockSig);
 }

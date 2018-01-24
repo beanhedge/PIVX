@@ -100,7 +100,7 @@ public:
     const CBigNum& getSerialNumber() const { return this->serialNumber; }
     const CBigNum& getRandomness() const { return this->randomness; }
     const CPrivKey& getPrivKey() const { return this->privkey; }
-    const CPubKey& getPubKey() const;
+    const CPubKey getPubKey() const;
     const uint8_t& getVersion() const { return this->version; }
 
     void setPublicCoin(PublicCoin p) { publicCoin = p; }

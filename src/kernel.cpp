@@ -289,6 +289,8 @@ bool CheckStake(const CDataStream& ssUniqueID, CAmount nValueIn, const uint64_t 
     ss << nStakeModifier << nTimeBlockFrom << ssUniqueID << nTimeTx;
     hashProofOfStake = Hash(ss.begin(), ss.end());
 
+    LogPrintf("%s: nTimeBlock=%d nTimeTx=%d modifier=%d\n", __func__, nTimeBlockFrom, nTimeTx, nStakeModifier);
+
     return stakeTargetHit(hashProofOfStake, nValueIn, bnTarget);
 }
 
